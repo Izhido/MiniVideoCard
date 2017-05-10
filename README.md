@@ -4,7 +4,7 @@ Generate 2D images from 3D models in CPU / RAM using the general principle behin
 
 The current implementation is C++ based, runs sequentially (i.e. no threads or parallel processing), and generates images as large as your chosen platform and RAM size allows them to be.
 
-Developers using this library create and specify their own vertex and fragment shaders to the rasterizer component, allowing them to control in a precise way how polygons and pixels are written into the image.
+Developers using this library create and specify their own vertex and fragment shaders to the rasterizer component, allowing them to control in a precise way how polygons and pixels are written into the image. For this task, the library provides several basic (2, 3, and 4-dimensional) Vector and Matrix implementations, as well as a 2-dimensional Texture class with support for mipmaps and a separate Sampler class.
 
 Pros:
 * **Portable**. Can be included in any projects with minimal-to-no dependencies on any extra language features.
