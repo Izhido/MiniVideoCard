@@ -278,7 +278,8 @@ int main(int argc, const char * argv[])
     WriteBitmap(rasterizer.Width(), rasterizer.Height(), rasterizer.ColorBuffer(), 0, "test2.bmp");
     
 	Sampler2 sampler1;
-	sampler1.SetMinificationFilter(NearestNeighbor);
+    sampler1.SetMinificationFilter(NearestNeighbor);
+    sampler1.SetMagnificationFilter(NearestNeighbor);
 
     Texture2 texture1(rasterizer, true, &sampler1);
     
@@ -289,6 +290,7 @@ int main(int argc, const char * argv[])
 
     Sampler2 sampler2;
 	sampler2.SetMinificationFilter(Bilinear);
+    sampler2.SetMagnificationFilter(Bilinear);
 
 	Texture2 texture2(rasterizer, true, &sampler2);
     
@@ -297,6 +299,43 @@ int main(int argc, const char * argv[])
         WriteBitmap(texture2.Width(i), texture2.Height(i), texture2.Buffer(), texture2.Offset(i), "test4_L" + to_string(i) + ".bmp");
     }
 
+    Texture2 texture3(80, 80, 4, true);
+    Texture2 texture4(80, 80, 4, true);
+    
+    auto& b3 = texture3.Buffer();
+    auto& b4 = texture4.Buffer();
+    
+    auto p = 0;
+    
+    for (size_t j = 0; j < 80; j++)
+    {
+        size_t v = (j / 10) % 2;
+        
+        for (size_t i = 0; i < 80; i++)
+        {
+            size_t h = (i / 10) % 2;
+            
+            if (v == h)
+            {
+                b3[p] = 1;
+                b3[p + 1] = 1;
+                b3[p + 2] = 1;
+
+                b4[p] = 1;
+                b4[p + 1] = 1;
+                b4[p + 2] = 1;
+            }
+
+            b3[p + 3] = 1;
+            b4[p + 3] = 1;
+
+            p += 4;
+        }
+    }
+    
+    sampler1.GenerateMipmaps(texture3);
+    sampler2.GenerateMipmaps(texture4);
+    
     TexturedVertexShader texturedVertexShader;
     TexturedFragmentShader texturedFragmentShader;
     
@@ -304,30 +343,22 @@ int main(int argc, const char * argv[])
     model.SetIdentity();
     
     Matrix4 view;
-    view.SetLookAt(Vector3(0, 3, 3), Vector3(0, 0, 0), Vector3(0, 1, -1));
+    view.SetLookAt(Vector3(0, 0.5, 2.72), Vector3(0, 0, 0), Vector3(0, 1, 0));
     
     Matrix4 projection;
     projection.SetPerspective(3.14159265358979323846 / 4.0, (double)rasterizer.Width() / (double)rasterizer.Height(), 0.1, 10);
     
-	TexturedParameters texturedParameters1(&model, &view, &projection, &texture1, &sampler1);
-    TexturedParameters texturedParameters2(&model, &view, &projection, &texture2, &sampler2);
+	TexturedParameters texturedParameters1(&model, &view, &projection, &texture3, &sampler1);
+    TexturedParameters texturedParameters2(&model, &view, &projection, &texture4, &sampler2);
     
-    vertices.push_back(new TexturedData(0, 0.5, 0.5, -1.5, -1.5));
-    vertices.push_back(new TexturedData(-0.5, 0.5, 0, 1.5, -1.5));
-    vertices.push_back(new TexturedData(-0.5, -0.5, 0, 1.5, 1.5));
-    vertices.push_back(new TexturedData(0, -0.5, 0.5, -1.5, 1.5));
-    vertices.push_back(new TexturedData(-0.5, 0.5, 0, -1.5, -1.5));
-    vertices.push_back(new TexturedData(0, 0.5, -0.5, 1.5, -1.5));
-    vertices.push_back(new TexturedData(0, -0.5, -0.5, 1.5, 1.5));
-    vertices.push_back(new TexturedData(-0.5, -0.5, 0, -1.5, 1.5));
-    vertices.push_back(new TexturedData(0, 0.5, -0.5, -1.5, -1.5));
-    vertices.push_back(new TexturedData(0.5, 0.5, 0, 1.5, -1.5));
-    vertices.push_back(new TexturedData(0.5, -0.5, 0, 1.5, 1.5));
-    vertices.push_back(new TexturedData(0, -0.5, -0.5, -1.5, 1.5));
-    vertices.push_back(new TexturedData(0.5, 0.5, 0, -1.5, -1.5));
-    vertices.push_back(new TexturedData(0, 0.5, 0.5, 1.5, -1.5));
-    vertices.push_back(new TexturedData(0, -0.5, 0.5, 1.5, 1.5));
-    vertices.push_back(new TexturedData(0.5, -0.5, 0, -1.5, 1.5));
+    vertices.push_back(new TexturedData(-1, 0, 1, -2, -2));
+    vertices.push_back(new TexturedData(0, 0, 1, 2, -2));
+    vertices.push_back(new TexturedData(0, 0, -5, 2, 10));
+    vertices.push_back(new TexturedData(-1, 0, -5, -2, 10));
+    vertices.push_back(new TexturedData(0, 0, 1, -2, -2));
+    vertices.push_back(new TexturedData(1, 0, 1, 2, -2));
+    vertices.push_back(new TexturedData(1, 0, -5, 2, 10));
+    vertices.push_back(new TexturedData(0, 0, -5, -2, 10));
 
     vector<size_t> indices;
     
@@ -343,27 +374,15 @@ int main(int argc, const char * argv[])
     indices.push_back(18);
     indices.push_back(19);
     indices.push_back(16);
-    indices.push_back(20);
-    indices.push_back(21);
-    indices.push_back(22);
-    indices.push_back(22);
-    indices.push_back(23);
-    indices.push_back(20);
-    indices.push_back(24);
-    indices.push_back(25);
-    indices.push_back(26);
-    indices.push_back(26);
-    indices.push_back(27);
-    indices.push_back(24);
     
     rasterizer.AddCommand(true, new ClearColorBuffer(0.5, 0.5, 0.5, 1));
     rasterizer.AddCommand(true, new ClearDepthBuffer());
     rasterizer.AddCommand(true, new UseVertexShader(false, &texturedVertexShader));
     rasterizer.AddCommand(true, new UseFragmentShader(false, &texturedFragmentShader));
     rasterizer.AddCommand(true, new SetParameters(false, &texturedParameters1));
-    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 0, 12));
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 0, 6));
     rasterizer.AddCommand(true, new SetParameters(false, &texturedParameters2));
-    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 12, 12));
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 6));
     
     rasterizer.Run();
     
@@ -378,9 +397,9 @@ int main(int argc, const char * argv[])
     rasterizer.AddCommand(true, new ClearColorBuffer(0.5, 0.5, 0.5, 1));
     rasterizer.AddCommand(true, new ClearDepthBuffer());
     rasterizer.AddCommand(true, new SetParameters(false, &texturedParameters1));
-    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 0, 12));
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 0, 6));
     rasterizer.AddCommand(true, new SetParameters(false, &texturedParameters2));
-    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 12, 12));
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 6));
     
     rasterizer.Run();
     
@@ -395,9 +414,9 @@ int main(int argc, const char * argv[])
     rasterizer.AddCommand(true, new ClearColorBuffer(0.5, 0.5, 0.5, 1));
     rasterizer.AddCommand(true, new ClearDepthBuffer());
     rasterizer.AddCommand(true, new SetParameters(false, &texturedParameters1));
-    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 0, 12));
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 0, 6));
     rasterizer.AddCommand(true, new SetParameters(false, &texturedParameters2));
-    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 12, 12));
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 6));
     
     rasterizer.Run();
     
@@ -416,9 +435,9 @@ int main(int argc, const char * argv[])
     rasterizer.AddCommand(true, new ClearColorBuffer(0.5, 0.5, 0.5, 1));
     rasterizer.AddCommand(true, new ClearDepthBuffer());
     rasterizer.AddCommand(true, new SetParameters(false, &texturedParameters1));
-    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 0, 12));
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 0, 6));
     rasterizer.AddCommand(true, new SetParameters(false, &texturedParameters2));
-    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 12, 12));
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 6));
     
     rasterizer.Run();
     

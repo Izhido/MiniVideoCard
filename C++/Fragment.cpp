@@ -12,36 +12,17 @@ namespace MiniVideoCard
 {
     using namespace std;
     
-    Fragment::Fragment(double x, double y, double z, size_t varyingCount)
+    Fragment::Fragment(double x, double y, double z, size_t varyingCount, bool discarded) : position(x, y, z), varyingsAtRight(nullptr), varyingsBelow(nullptr), discarded(discarded)
     {
-        this->x = x;
-        this->y = y;
-        this->z = z;
-
         if (varyingCount > 0)
         {
             varyings.resize(varyingCount);
         }
-		
-		varyingsAtRight = nullptr;
-		varyingsBelow = nullptr;
-		
-		discarded = false;
     }
     
-    double Fragment::X()
+    const Vector3& Fragment::Position() const
     {
-        return x;
-    }
-    
-    double Fragment::Y()
-    {
-        return y;
-    }
-
-    double Fragment::Z()
-    {
-        return z;
+        return position;
     }
     
     vector<double>& Fragment::Varyings()

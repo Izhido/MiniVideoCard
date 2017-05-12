@@ -60,9 +60,9 @@ namespace MiniVideoCard
         
         Parameters* parameters;
         
-        vector<Fragment> fragments;
+        vector<Fragment*> fragments;
         
-        vector<bool> render;
+        size_t PositionFor(double x, double y);
         
         void DrawTriangle(Data* vertices[3]);
         

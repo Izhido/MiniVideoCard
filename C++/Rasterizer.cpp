@@ -224,6 +224,11 @@ namespace MiniVideoCard
         ClearCommands();
     }
     
+    size_t Rasterizer::PositionFor(double x, double y)
+    {
+        return (height - 1 - (size_t)floor(y)) * width + (size_t)floor(x);
+    }
+
     void Rasterizer::DrawTriangle(Data* vertices[3])
     {
         Vertex vertex1;
@@ -286,53 +291,92 @@ namespace MiniVideoCard
             return;
         }
         
-        auto xw1 = floor(((double)width / 2) * xd1 + ((double)width / 2));
-        auto yw1 = floor(((double)height / 2) * yd1 + ((double)height / 2));
+        auto widthAsDouble = (double)width;
+        auto heightAsDouble = (double)height;
+        
+        auto halfWidthAsDouble = widthAsDouble / 2;
+        auto halfHeightAsDouble = heightAsDouble / 2;
+        
+        auto xw1 = floor(halfWidthAsDouble * xd1 + halfWidthAsDouble);
+        auto yw1 = floor(halfHeightAsDouble * yd1 + halfHeightAsDouble);
         auto zw1 = 0.5 * zd1 + 0.5;
 
-        auto xw2 = floor(((double)width / 2) * xd2 + ((double)width / 2));
-        auto yw2 = floor(((double)height / 2) * yd2 + ((double)height / 2));
+        auto xw2 = floor(halfWidthAsDouble * xd2 + halfWidthAsDouble);
+        auto yw2 = floor(halfHeightAsDouble * yd2 + halfHeightAsDouble);
         auto zw2 = 0.5 * zd2 + 0.5;
         
-        auto xw3 = floor(((double)width / 2) * xd3 + ((double)width / 2));
-        auto yw3 = floor(((double)height / 2) * yd3 + ((double)height / 2));
+        auto xw3 = floor(halfWidthAsDouble * xd3 + halfWidthAsDouble);
+        auto yw3 = floor(halfHeightAsDouble * yd3 + halfHeightAsDouble);
         auto zw3 = 0.5 * zd3 + 0.5;
         
-        auto area = fabs(xw1 * yw2 + xw2 * yw3 + xw3 * yw1 - xw2 * yw1 - xw3 * yw2 - xw1 * yw3) / 2;
+        auto xw1TimesY2 = xw1 * yw2;
+        auto xw2TimesY1 = xw2 * yw1;
+        auto xw1TimesY3 = xw1 * yw3;
+        auto xw3TimesY1 = xw3 * yw1;
+        auto xw2TimesY3 = xw2 * yw3;
+        auto xw3TimesY2 = xw3 * yw2;
+
+        auto xw1Minus2 = xw1 - xw2;
+        auto yw1Minus2 = yw1 - yw2;
+        auto xw2Minus3 = xw2 - xw3;
+        auto yw2Minus3 = yw2 - yw3;
+        auto xw3Minus1 = xw3 - xw1;
+        auto yw3Minus1 = yw3 - yw1;
         
-        if (area == 0)
+        auto areaTimes2 = fabs(xw1 * yw2 + xw2 * yw3 + xw3 * yw1 - xw2 * yw1 - xw3 * yw2 - xw1 * yw3);
+        
+        if (areaTimes2 == 0)
         {
             return;
         }
         
-        auto left = min(min(xw1, xw2), xw3);
-        auto bottom = min(min(yw1, yw2), yw3);
-        auto right = max(max(xw1, xw2), xw3);
-        auto top = max(max(yw1, yw2), yw3);
+        auto left = max(min(min(xw1, xw2), xw3), 0.0);
+        auto bottom = max(min(min(yw1, yw2), yw3), 0.0);
+        auto right = min(max(max(xw1, xw2), xw3), widthAsDouble - 1);
+        auto top = min(max(max(yw1, yw2), yw3), heightAsDouble - 1);
         
         size_t scanWidth = 0;
         
         size_t v = 0;
         
-        for (auto y = bottom + 0.5; y < top + 1; y++)
+        for (auto y = bottom + 0.5; y < top + 1; y += 1)
         {
             size_t h = 0;
             
-            for (auto x = left + 0.5; x < right + 1; x++)
+            for (auto x = left + 0.5; x < right + 1; x += 1)
             {
-                auto area12 = fabs(x * yw1 + xw1 * yw2 + xw2 * y - xw1 * y - xw2 * yw1 - x * yw2) / 2;
-                auto area13 = fabs(x * yw1 + xw1 * yw3 + xw3 * y - xw1 * y - xw3 * yw1 - x * yw3) / 2;
-                auto area23 = fabs(x * yw2 + xw2 * yw3 + xw3 * y - xw2 * y - xw3 * yw2 - x * yw3) / 2;
+                auto area12Times2 = fabs(x * yw1 + xw1TimesY2 + xw2 * y - xw1 * y - xw2TimesY1 - x * yw2);
+                auto area13Times2 = fabs(x * yw1 + xw1TimesY3 + xw3 * y - xw1 * y - xw3TimesY1 - x * yw3);
+                auto area23Times2 = fabs(x * yw2 + xw2TimesY3 + xw3 * y - xw2 * y - xw3TimesY2 - x * yw3);
 
-                auto a = area23 / area;
-                auto b = area13 / area;
-                auto c = area12 / area;
+                auto a = area23Times2 / areaTimes2;
+                auto b = area13Times2 / areaTimes2;
+                auto c = area12Times2 / areaTimes2;
                 
                 auto z = a * zw1 + b * zw2 + c * zw3;
                 
-                fragments.emplace_back(x, y, z, count1);
+                bool discarded = true;
                 
-                auto& fragmentVaryings = fragments.back().Varyings();
+                if (x >= 0 && x < widthAsDouble && y >= 0 && y < heightAsDouble)
+                {
+                    auto sign0 = (x - xw2) * yw1Minus2 - xw1Minus2 * (y - yw2);
+                    auto sign1 = (x - xw3) * yw2Minus3 - xw2Minus3 * (y - yw3);
+                    auto sign2 = (x - xw1) * yw3Minus1 - xw3Minus1 * (y - yw1);
+                    
+                    if (((sign0 < 0 && sign1 < 0) || (sign0 >= 0 && sign1 >= 0)) && ((sign1 < 0 && sign2 < 0) || (sign1 >= 0 && sign2 >= 0)))
+                    {
+                        auto position = PositionFor(x, y);
+                        
+                        if (z >= 0 && z <= 1 && z < depthBuffer[position])
+                        {
+                            discarded = false;
+                        }
+                    }
+                }
+                
+                fragments.push_back(new Fragment(x, y, z, count1, discarded));
+                
+                auto& fragmentVaryings = fragments.back()->Varyings();
 
                 if (count1 > 0)
                 {
@@ -346,16 +390,16 @@ namespace MiniVideoCard
                     }
                 }
                 
-				size_t position = v * scanWidth + h;
+				size_t p = v * scanWidth + h;
 				
 				if (h > 0)
                 {
-                    fragments[position - 1].SetVaryingsAtRight(&fragmentVaryings);
+                    fragments[p - 1]->SetVaryingsAtRight(&fragmentVaryings);
                 }
 
 				if (v > 0)
 				{
-					fragments[position - scanWidth].SetVaryingsBelow(&fragmentVaryings);
+					fragments[p - scanWidth]->SetVaryingsBelow(&fragmentVaryings);
 				}
                 
                 h++;
@@ -369,97 +413,64 @@ namespace MiniVideoCard
             v++;
         }
 
-        size_t position = 0;
-        
-        for (auto y = bottom + 0.5; y < top + 1; y++)
-        {
-            for (auto x = left + 0.5; x < right + 1; x++)
-            {
-                Fragment& fragment = fragments[position];
-                
-                position++;
-                
-                if (y >= 0 && y < (double)height && x >= 0 && x < (double)width)
-                {
-                    auto sign0 = (x - xw2) * (yw1 - yw2) - (xw1 - xw2) * (y - yw2);
-                    auto sign1 = (x - xw3) * (yw2 - yw3) - (xw2 - xw3) * (y - yw3);
-                    auto sign2 = (x - xw1) * (yw3 - yw1) - (xw3 - xw1) * (y - yw1);
-                    
-                    if (((sign0 < 0 && sign1 < 0) || (sign0 >= 0 && sign1 >= 0)) && ((sign1 < 0 && sign2 < 0) || (sign1 >= 0 && sign2 >= 0)))
-                    {
-                        auto inBuffer = (height - 1 - (size_t)floor(fragment.Y())) * width + (size_t)floor(fragment.X());
-                        
-                        auto depth = fragment.Z();
-                        
-                        if (depth >= 0 && depth <= 1 && depth < depthBuffer[inBuffer])
-                        {
-                            render.push_back(true);
-                            
-                            continue;
-                        }
-                    }
-                }
-                
-                render.push_back(false);
-            }
-        }
-        
         for (size_t i = 0; i < fragments.size(); i++)
         {
-            if (render[i])
-            {
-                Fragment& fragment = fragments[i];
-                
-                fragmentShader->Run(&fragment, parameters);
-                
-                if (fragment.Discarded())
-                {
-                    render[i] = false;
-                }
-            }
-        }
-        
-        for (size_t i = 0; i < fragments.size(); i++)
-        {
-            if (render[i])
-            {
-                Fragment& fragment = fragments[i];
-                
-                auto x = (size_t)floor(fragment.X());
-                auto y = (size_t)floor(fragment.Y());
-                auto z = fragment.Z();
-                
-                auto positionDepth = (height - 1 - y) * width + x;
-                
-                depthBuffer[positionDepth] = z;
+            auto fragment = fragments[i];
 
-                auto positionR = positionDepth * 4;
-                auto positionG = positionR + 1;
-                auto positionB = positionG + 1;
-                auto positionA = positionB + 1;
-                
-                auto color = fragment.Color();
-                
-                auto sourceR = color.X();
-                auto sourceG = color.Y();
-                auto sourceB = color.Z();
-                auto sourceA = color.W();
-                
-                auto destinationR = colorBuffer[positionR];
-                auto destinationG = colorBuffer[positionG];
-                auto destinationB = colorBuffer[positionB];
-                auto destinationA = colorBuffer[positionA];
-                
-                colorBuffer[positionR] = sourceR * sourceA + destinationR * (1 - sourceA);
-                colorBuffer[positionG] = sourceG * sourceA + destinationG * (1 - sourceA);
-                colorBuffer[positionB] = sourceB * sourceA + destinationB * (1 - sourceA);
-                colorBuffer[positionA] = sourceA * sourceA + destinationA * (1 - sourceA);
+            if (fragment->Discarded())
+            {
+                continue;
             }
+
+            fragmentShader->Run(fragment, parameters);
+        }
+    
+        for (size_t i = 0; i < fragments.size(); i++)
+        {
+            auto fragment = fragments[i];
+            
+            if (fragment->Discarded())
+            {
+                continue;
+            }
+            
+            auto& position = fragment->Position();
+            
+            auto positionDepth = PositionFor(position.X(), position.Y());
+            
+            auto depth = position.Z();
+            
+            depthBuffer[positionDepth] = depth;
+            
+            auto positionR = positionDepth * 4;
+            auto positionG = positionR + 1;
+            auto positionB = positionG + 1;
+            auto positionA = positionB + 1;
+            
+            auto color = fragment->Color();
+            
+            auto sourceR = color.X();
+            auto sourceG = color.Y();
+            auto sourceB = color.Z();
+            auto sourceA = color.W();
+            
+            auto destinationR = colorBuffer[positionR];
+            auto destinationG = colorBuffer[positionG];
+            auto destinationB = colorBuffer[positionB];
+            auto destinationA = colorBuffer[positionA];
+            
+            colorBuffer[positionR] = sourceR * sourceA + destinationR * (1 - sourceA);
+            colorBuffer[positionG] = sourceG * sourceA + destinationG * (1 - sourceA);
+            colorBuffer[positionB] = sourceB * sourceA + destinationB * (1 - sourceA);
+            colorBuffer[positionA] = sourceA * sourceA + destinationA * (1 - sourceA);
+        }
+    
+        for (size_t i = 0; i < fragments.size(); i++)
+        {
+            delete fragments[i];
         }
         
         fragments.clear();
-        
-        render.clear();
     }
 
     void Rasterizer::ClearCommands()

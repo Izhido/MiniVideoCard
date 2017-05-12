@@ -18,13 +18,9 @@ namespace MiniVideoCard
     class Fragment
     {
     public:
-        Fragment(double x, double y, double z, size_t varyingCount);
-        
-        double X();
-        
-        double Y();
-        
-        double Z();
+        Fragment(double x, double y, double z, size_t varyingCount, bool discarded);
+
+        const Vector3& Position() const;
         
         vector<double>& Varyings();
 
@@ -47,11 +43,7 @@ namespace MiniVideoCard
         double DerivativeY(size_t index);
         
     private:
-        double x;
-        
-        double y;
-        
-        double z;
+        Vector3 position;
         
         vector<double> varyings;
         
