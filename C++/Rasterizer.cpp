@@ -29,12 +29,12 @@ namespace MiniVideoCard
     {
         if (width <= 0)
         {
-            throw new runtime_error("Width must be greater than zero.");
+            throw runtime_error("Width must be greater than zero.");
         }
 
         if (height <= 0)
         {
-            throw new runtime_error("Height must be greater than zero.");
+            throw runtime_error("Height must be greater than zero.");
         }
         
         this->width = width;
@@ -323,7 +323,7 @@ namespace MiniVideoCard
         auto xw3Minus1 = xw3 - xw1;
         auto yw3Minus1 = yw3 - yw1;
         
-        auto areaTimes2 = fabs(xw1 * yw2 + xw2 * yw3 + xw3 * yw1 - xw2 * yw1 - xw3 * yw2 - xw1 * yw3);
+        auto areaTimes2 = fabs(xw1TimesY2 + xw2TimesY3 + xw3TimesY1 - xw2TimesY1 - xw3TimesY2 - xw1TimesY3);
         
         if (areaTimes2 == 0)
         {
@@ -335,15 +335,18 @@ namespace MiniVideoCard
         auto right = min(max(max(xw1, xw2), xw3), widthAsDouble - 1);
         auto top = min(max(max(yw1, yw2), yw3), heightAsDouble - 1);
         
+        auto endX = right + 2;
+        auto endY = top + 2;
+        
         size_t scanWidth = 0;
         
         size_t v = 0;
         
-        for (auto y = bottom + 0.5; y < top + 1; y += 1)
+        for (auto y = bottom + 0.5; y < endY; y++)
         {
             size_t h = 0;
             
-            for (auto x = left + 0.5; x < right + 1; x += 1)
+            for (auto x = left + 0.5; x < endX; x++)
             {
                 auto area12Times2 = fabs(x * yw1 + xw1TimesY2 + xw2 * y - xw1 * y - xw2TimesY1 - x * yw2);
                 auto area13Times2 = fabs(x * yw1 + xw1TimesY3 + xw3 * y - xw1 * y - xw3TimesY1 - x * yw3);

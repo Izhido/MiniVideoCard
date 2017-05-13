@@ -23,22 +23,22 @@ namespace MiniVideoCard
     {
         if (width == 0)
         {
-            throw new runtime_error("Width cannot be zero.");
+            throw runtime_error("Width cannot be zero.");
         }
         
         if (height == 0)
         {
-            throw new runtime_error("Height cannot be zero.");
+            throw runtime_error("Height cannot be zero.");
         }
 
         if (components < 1)
         {
-            throw new runtime_error("Components cannot be less than 1.");
+            throw runtime_error("Components cannot be less than 1.");
         }
         
         if (components > 4)
         {
-            throw new runtime_error("Components cannot be greater than 4.");
+            throw runtime_error("Components cannot be greater than 4.");
         }
         
         this->components = components;

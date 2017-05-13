@@ -343,7 +343,7 @@ int main(int argc, const char * argv[])
     model.SetIdentity();
     
     Matrix4 view;
-    view.SetLookAt(Vector3(0, 0.5, 2.72), Vector3(0, 0, 0), Vector3(0, 1, 0));
+    view.SetLookAt(Vector3(0, 0.5, 2), Vector3(0, 0, 0), Vector3(0, 1, 0));
     
     Matrix4 projection;
     projection.SetPerspective(3.14159265358979323846 / 4.0, (double)rasterizer.Width() / (double)rasterizer.Height(), 0.1, 10);

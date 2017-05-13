@@ -63,7 +63,7 @@ namespace MiniVideoCard
     {
         if (!texture.Mipmapped())
         {
-            throw new runtime_error("No mipmap levels present.");
+            throw runtime_error("No mipmap levels present.");
         }
         
         auto previousWidth = (double)texture.Width(0);
@@ -86,13 +86,16 @@ namespace MiniVideoCard
             auto halfHorizontal = horizontal / 2;
             auto halfVertical = vertical / 2;
             
+            auto endX = previousWidth + 1;
+            auto endY = previousHeight + 1;
+            
             size_t target = 0;
             
             if (minificationFilter == NearestNeighbor)
             {
-                for (auto y = halfVertical; y < previousHeight; y += vertical)
+                for (auto y = halfVertical; y < endY; y += vertical)
                 {
-                    for (auto x = halfHorizontal; x < previousWidth; x += horizontal)
+                    for (auto x = halfHorizontal; x < endX; x += horizontal)
                     {
                         auto bufferX = (size_t)floor(x);
                         auto bufferY = (size_t)floor(y);
@@ -110,9 +113,9 @@ namespace MiniVideoCard
             }
             else if (width > 1 && height > 1)
             {
-                for (auto y = halfVertical; y < previousHeight; y += vertical)
+                for (auto y = halfVertical; y < endY; y += vertical)
                 {
-                    for (auto x = halfHorizontal; x < previousWidth; x += horizontal)
+                    for (auto x = halfHorizontal; x < endX; x += horizontal)
                     {
                         auto topLeftX = (size_t)floor(x - 0.5);
                         auto topLeftY = (size_t)floor(y - 0.5);
@@ -139,9 +142,9 @@ namespace MiniVideoCard
             }
             else
             {
-                for (auto y = halfVertical; y < previousHeight; y += vertical)
+                for (auto y = halfVertical; y < endY; y += vertical)
                 {
-                    for (auto x = halfHorizontal; x < previousWidth; x += horizontal)
+                    for (auto x = halfHorizontal; x < endX; x += horizontal)
                     {
                         auto topLeftX = (size_t)floor(x - 0.5);
                         auto topLeftY = (size_t)floor(y - 0.5);
@@ -322,7 +325,7 @@ namespace MiniVideoCard
         
         if (components != 1)
         {
-            throw new runtime_error("Components must be 1.");
+            throw runtime_error("Components must be 1.");
         }
 
         return 0;
@@ -334,7 +337,7 @@ namespace MiniVideoCard
         
         if (components != 2)
         {
-            throw new runtime_error("Components must be 2.");
+            throw runtime_error("Components must be 2.");
         }
     }
     
@@ -344,7 +347,7 @@ namespace MiniVideoCard
         
         if (components != 3)
         {
-            throw new runtime_error("Components must be 3.");
+            throw runtime_error("Components must be 3.");
         }
     }
     
@@ -354,7 +357,7 @@ namespace MiniVideoCard
         
         if (components != 4)
         {
-            throw new runtime_error("Components must be 4.");
+            throw runtime_error("Components must be 4.");
         }
         
         Filter filter;

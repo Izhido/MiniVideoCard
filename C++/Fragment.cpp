@@ -69,12 +69,12 @@ namespace MiniVideoCard
     {
         if (varyingsAtRight == nullptr)
         {
-            throw new runtime_error("Varyings at right were not provided.");
+            throw runtime_error("Varyings at right were not provided.");
         }
 
         if (index >= varyings.size() || index >= varyingsAtRight->size())
         {
-            throw new runtime_error("Index out of range for varyings.");
+            throw runtime_error("Index out of range for varyings.");
         }
         
         return varyingsAtRight->at(index) - varyings[index];
@@ -84,12 +84,12 @@ namespace MiniVideoCard
     {
         if (varyingsBelow == nullptr)
         {
-            throw new runtime_error("Varyings below were not provided.");
+            throw runtime_error("Varyings below were not provided.");
         }
         
         if (index >= varyings.size() || index >= varyingsBelow->size())
         {
-            throw new runtime_error("Index out of range for varyings.");
+            throw runtime_error("Index out of range for varyings.");
         }
         
         return varyingsBelow->at(index) - varyings[index];
