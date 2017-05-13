@@ -299,21 +299,21 @@ int main(int argc, const char * argv[])
         WriteBitmap(texture2.Width(i), texture2.Height(i), texture2.Buffer(), texture2.Offset(i), "test4_L" + to_string(i) + ".bmp");
     }
 
-    Texture2 texture3(80, 80, 4, true);
-    Texture2 texture4(80, 80, 4, true);
+    Texture2 texture3(64, 64, 4, true);
+    Texture2 texture4(64, 64, 4, true);
     
     auto& b3 = texture3.Buffer();
     auto& b4 = texture4.Buffer();
     
     auto p = 0;
     
-    for (size_t j = 0; j < 80; j++)
+    for (size_t j = 0; j < 64; j++)
     {
-        size_t v = (j / 10) % 2;
+        size_t v = (j / 16) % 2;
         
-        for (size_t i = 0; i < 80; i++)
+        for (size_t i = 0; i < 64; i++)
         {
-            size_t h = (i / 10) % 2;
+            size_t h = (i / 16) % 2;
             
             if (v == h)
             {
@@ -351,14 +351,14 @@ int main(int argc, const char * argv[])
 	TexturedParameters texturedParameters1(&model, &view, &projection, &texture3, &sampler1);
     TexturedParameters texturedParameters2(&model, &view, &projection, &texture4, &sampler2);
     
-    vertices.push_back(new TexturedData(-1, 0, 1, -2, -2));
+    vertices.push_back(new TexturedData(-8, 0, 1, -16, -2));
     vertices.push_back(new TexturedData(0, 0, 1, 2, -2));
-    vertices.push_back(new TexturedData(0, 0, -5, 2, 10));
-    vertices.push_back(new TexturedData(-1, 0, -5, -2, 10));
+    vertices.push_back(new TexturedData(0, 0, -8, 2, 16));
+    vertices.push_back(new TexturedData(-8, 0, -8, -16, 16));
     vertices.push_back(new TexturedData(0, 0, 1, -2, -2));
-    vertices.push_back(new TexturedData(1, 0, 1, 2, -2));
-    vertices.push_back(new TexturedData(1, 0, -5, 2, 10));
-    vertices.push_back(new TexturedData(0, 0, -5, -2, 10));
+    vertices.push_back(new TexturedData(8, 0, 1, 16, -2));
+    vertices.push_back(new TexturedData(8, 0, -8, 16, 16));
+    vertices.push_back(new TexturedData(0, 0, -8, -2, 16));
 
     vector<size_t> indices;
     

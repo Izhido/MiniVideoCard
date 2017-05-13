@@ -217,8 +217,8 @@ namespace MiniVideoCard
         
         if (position.Source() == &fragment.Varyings())
         {
-            auto width = texture.Width();
-            auto height = texture.Height();
+            auto width = (double)texture.Width();
+            auto height = (double)texture.Height();
             
             auto offsetX = position.Offset();
             auto offsetY = offsetX + 1;
@@ -229,32 +229,26 @@ namespace MiniVideoCard
             auto dydy = fragment.DerivativeY(offsetY);
             
             auto deltaXX = dxdx * width;
+            auto deltaXY = dxdy * width;
             auto deltaYY = dydy * height;
+            auto deltaYX = dydx * height;
             
-            if (deltaXX >= 1 || deltaYY >= 1)
+            auto squareLengthX = deltaXX * deltaXX + deltaYX * deltaYX;
+            auto squareLengthY = deltaXY * deltaXY + deltaYY * deltaYY;
+            
+            auto calculatedLevel = floor(0.5 * log2(max(squareLengthX, squareLengthY)));
+
+            if (calculatedLevel >= 0)
             {
-                auto deltaXY = dxdy * width;
-                auto deltaYX = dydx * height;
-                
                 filter = minificationFilter;
                 
-                auto squareLengthX = deltaXX * deltaXX + deltaYX * deltaYX;
-                auto squareLengthY = deltaXY * dxdy + dydy * dydy;
-                
-                auto calculatedLevel = 0.5 * log2(max(squareLengthX, squareLengthY));
-                
-                if (calculatedLevel > 0)
+                if (calculatedLevel >= (double)texture.Levels())
                 {
-                    calculatedLevel = floor(calculatedLevel);
-                    
-                    if (calculatedLevel >= texture.Levels())
-                    {
-                        level = texture.Levels() - 1;
-                    }
-                    else
-                    {
-                        level = (size_t)calculatedLevel;
-                    }
+                    level = texture.Levels() - 1;
+                }
+                else
+                {
+                    level = (size_t)calculatedLevel;
                 }
             }
         }
@@ -327,8 +321,165 @@ namespace MiniVideoCard
         {
             throw runtime_error("Components must be 1.");
         }
-
-        return 0;
+        
+        Filter filter;
+        
+        size_t level;
+        
+        FilterAndLevelFor(texture, position, fragment, filter, level);
+        
+        auto& buffer = texture.Buffer();
+        
+        auto width = texture.Width(level);
+        auto height = texture.Height(level);
+        auto offset = texture.Offset(level);
+        
+        auto widthAsFloatingPoint = (double)width;
+        auto heightAsFloatingPoint = (double)height;
+        
+        auto x = position.X() * widthAsFloatingPoint;
+        auto y = position.Y() * heightAsFloatingPoint;
+        
+        if (filter == NearestNeighbor)
+        {
+            bool xOutOfBounds;
+            bool yOutOfBounds;
+            bool xInverted;
+            bool yInverted;
+            
+            CoordinatesFor(x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            
+            if ((horizontalWrap == ClampToBorder && xOutOfBounds) || (verticalWrap == ClampToBorder && yOutOfBounds))
+            {
+                return border.X();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(y) * width + (size_t)floor(x)) * components;
+                
+                return buffer[position];
+            }
+        }
+        else
+        {
+            auto topLeftX = x - 0.5;
+            auto topLeftY = y - 0.5;
+            
+            bool topLeftXOutOfBounds;
+            bool topLeftYOutOfBounds;
+            bool topLeftXInverted;
+            bool topLeftYInverted;
+            
+            CoordinatesFor(topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            
+            auto bottomRightX = x + 0.5;
+            auto bottomRightY = y + 0.5;
+            
+            bool bottomRightXOutOfBounds;
+            bool bottomRightYOutOfBounds;
+            bool bottomRightXInverted;
+            bool bottomRightYInverted;
+            
+            CoordinatesFor(bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            
+            double topLeft;
+            
+            if ((horizontalWrap == ClampToBorder && topLeftXOutOfBounds) || (verticalWrap == ClampToBorder && topLeftYOutOfBounds))
+            {
+                topLeft = border.X();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(topLeftY) * width + (size_t)floor(topLeftX)) * components;
+                
+                topLeft = buffer[position];
+            }
+            
+            double topRight;
+            
+            if ((horizontalWrap == ClampToBorder && bottomRightXOutOfBounds) || (verticalWrap == ClampToBorder && topLeftYOutOfBounds))
+            {
+                topRight = border.X();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(topLeftY) * width + (size_t)floor(bottomRightX)) * components;
+                
+                topRight = buffer[position];
+            }
+            
+            double bottomRight;
+            
+            if ((horizontalWrap == ClampToBorder && bottomRightXOutOfBounds) || (verticalWrap == ClampToBorder && bottomRightYOutOfBounds))
+            {
+                bottomRight = border.X();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(bottomRightY) * width + (size_t)floor(bottomRightX)) * components;
+                
+                bottomRight = buffer[position];
+            }
+            
+            double bottomLeft;
+            
+            if ((horizontalWrap == ClampToBorder && topLeftXOutOfBounds) || (verticalWrap == ClampToBorder && bottomRightYOutOfBounds))
+            {
+                bottomLeft = border.X();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(bottomRightY) * width + (size_t)floor(topLeftX)) * components;
+                
+                bottomLeft = buffer[position];
+            }
+            
+            double leftWeight;
+            
+            if (topLeftXInverted)
+            {
+                leftWeight = topLeftX - floor(topLeftX);
+            }
+            else
+            {
+                leftWeight = 1 - topLeftX + floor(topLeftX);
+            }
+            
+            double topWeight;
+            
+            if (topLeftYInverted)
+            {
+                topWeight = topLeftY - floor(topLeftY);
+            }
+            else
+            {
+                topWeight = 1 - topLeftY + floor(topLeftY);
+            }
+            
+            double rightWeight;
+            
+            if (bottomRightXInverted)
+            {
+                rightWeight = 1 - bottomRightX + floor(bottomRightX);
+            }
+            else
+            {
+                rightWeight = bottomRightX - floor(bottomRightX);
+            }
+            
+            double bottomWeight;
+            
+            if (bottomRightYInverted)
+            {
+                bottomWeight = 1 - bottomRightY + floor(bottomRightY);
+            }
+            else
+            {
+                bottomWeight = bottomRightY - floor(bottomRightY);
+            }
+            
+            return topLeft * leftWeight * topWeight + topRight * rightWeight * topWeight + bottomRight * bottomWeight * rightWeight + bottomLeft * bottomWeight * leftWeight;
+        }
     }
     
     void Sampler2::Sample(Texture2& texture, Vector2& position, Fragment& fragment, Vector2& result)
@@ -339,6 +490,177 @@ namespace MiniVideoCard
         {
             throw runtime_error("Components must be 2.");
         }
+        
+        Filter filter;
+        
+        size_t level;
+        
+        FilterAndLevelFor(texture, position, fragment, filter, level);
+        
+        auto& buffer = texture.Buffer();
+        
+        auto width = texture.Width(level);
+        auto height = texture.Height(level);
+        auto offset = texture.Offset(level);
+        
+        auto widthAsFloatingPoint = (double)width;
+        auto heightAsFloatingPoint = (double)height;
+        
+        auto x = position.X() * widthAsFloatingPoint;
+        auto y = position.Y() * heightAsFloatingPoint;
+        
+        if (filter == NearestNeighbor)
+        {
+            bool xOutOfBounds;
+            bool yOutOfBounds;
+            bool xInverted;
+            bool yInverted;
+            
+            CoordinatesFor(x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            
+            if ((horizontalWrap == ClampToBorder && xOutOfBounds) || (verticalWrap == ClampToBorder && yOutOfBounds))
+            {
+                result.Set(border.X(), border.Y());
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(y) * width + (size_t)floor(x)) * components;
+                
+                result.Set(buffer[position], buffer[position + 1]);
+            }
+        }
+        else
+        {
+            auto topLeftX = x - 0.5;
+            auto topLeftY = y - 0.5;
+            
+            bool topLeftXOutOfBounds;
+            bool topLeftYOutOfBounds;
+            bool topLeftXInverted;
+            bool topLeftYInverted;
+            
+            CoordinatesFor(topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            
+            auto bottomRightX = x + 0.5;
+            auto bottomRightY = y + 0.5;
+            
+            bool bottomRightXOutOfBounds;
+            bool bottomRightYOutOfBounds;
+            bool bottomRightXInverted;
+            bool bottomRightYInverted;
+            
+            CoordinatesFor(bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            
+            double topLeft1;
+            double topLeft2;
+            
+            if ((horizontalWrap == ClampToBorder && topLeftXOutOfBounds) || (verticalWrap == ClampToBorder && topLeftYOutOfBounds))
+            {
+                topLeft1 = border.X();
+                topLeft2 = border.Y();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(topLeftY) * width + (size_t)floor(topLeftX)) * components;
+                
+                topLeft1 = buffer[position];
+                topLeft2 = buffer[position + 1];
+            }
+            
+            double topRight1;
+            double topRight2;
+            
+            if ((horizontalWrap == ClampToBorder && bottomRightXOutOfBounds) || (verticalWrap == ClampToBorder && topLeftYOutOfBounds))
+            {
+                topRight1 = border.X();
+                topRight2 = border.Y();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(topLeftY) * width + (size_t)floor(bottomRightX)) * components;
+                
+                topRight1 = buffer[position];
+                topRight2 = buffer[position + 1];
+            }
+            
+            double bottomRight1;
+            double bottomRight2;
+            
+            if ((horizontalWrap == ClampToBorder && bottomRightXOutOfBounds) || (verticalWrap == ClampToBorder && bottomRightYOutOfBounds))
+            {
+                bottomRight1 = border.X();
+                bottomRight2 = border.Y();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(bottomRightY) * width + (size_t)floor(bottomRightX)) * components;
+                
+                bottomRight1 = buffer[position];
+                bottomRight2 = buffer[position + 1];
+            }
+            
+            double bottomLeft1;
+            double bottomLeft2;
+            
+            if ((horizontalWrap == ClampToBorder && topLeftXOutOfBounds) || (verticalWrap == ClampToBorder && bottomRightYOutOfBounds))
+            {
+                bottomLeft1 = border.X();
+                bottomLeft2 = border.Y();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(bottomRightY) * width + (size_t)floor(topLeftX)) * components;
+                
+                bottomLeft1 = buffer[position];
+                bottomLeft2 = buffer[position + 1];
+            }
+            
+            double leftWeight;
+            
+            if (topLeftXInverted)
+            {
+                leftWeight = topLeftX - floor(topLeftX);
+            }
+            else
+            {
+                leftWeight = 1 - topLeftX + floor(topLeftX);
+            }
+            
+            double topWeight;
+            
+            if (topLeftYInverted)
+            {
+                topWeight = topLeftY - floor(topLeftY);
+            }
+            else
+            {
+                topWeight = 1 - topLeftY + floor(topLeftY);
+            }
+            
+            double rightWeight;
+            
+            if (bottomRightXInverted)
+            {
+                rightWeight = 1 - bottomRightX + floor(bottomRightX);
+            }
+            else
+            {
+                rightWeight = bottomRightX - floor(bottomRightX);
+            }
+            
+            double bottomWeight;
+            
+            if (bottomRightYInverted)
+            {
+                bottomWeight = 1 - bottomRightY + floor(bottomRightY);
+            }
+            else
+            {
+                bottomWeight = bottomRightY - floor(bottomRightY);
+            }
+            
+            result.Set(topLeft1 * leftWeight * topWeight + topRight1 * rightWeight * topWeight + bottomRight1 * bottomWeight * rightWeight + bottomLeft1 * bottomWeight * leftWeight, topLeft2 * leftWeight * topWeight + topRight2 * rightWeight * topWeight + bottomRight2 * bottomWeight * rightWeight + bottomLeft2 * bottomWeight * leftWeight);
+        }
     }
     
     void Sampler2::Sample(Texture2& texture, Vector2& position, Fragment& fragment, Vector3& result)
@@ -348,6 +670,189 @@ namespace MiniVideoCard
         if (components != 3)
         {
             throw runtime_error("Components must be 3.");
+        }
+        
+        Filter filter;
+        
+        size_t level;
+        
+        FilterAndLevelFor(texture, position, fragment, filter, level);
+        
+        auto& buffer = texture.Buffer();
+        
+        auto width = texture.Width(level);
+        auto height = texture.Height(level);
+        auto offset = texture.Offset(level);
+        
+        auto widthAsFloatingPoint = (double)width;
+        auto heightAsFloatingPoint = (double)height;
+        
+        auto x = position.X() * widthAsFloatingPoint;
+        auto y = position.Y() * heightAsFloatingPoint;
+        
+        if (filter == NearestNeighbor)
+        {
+            bool xOutOfBounds;
+            bool yOutOfBounds;
+            bool xInverted;
+            bool yInverted;
+            
+            CoordinatesFor(x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            
+            if ((horizontalWrap == ClampToBorder && xOutOfBounds) || (verticalWrap == ClampToBorder && yOutOfBounds))
+            {
+                result.Set(border.X(), border.Y(), border.Z());
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(y) * width + (size_t)floor(x)) * components;
+                
+                result.Set(buffer[position], buffer[position + 1], buffer[position + 2]);
+            }
+        }
+        else
+        {
+            auto topLeftX = x - 0.5;
+            auto topLeftY = y - 0.5;
+            
+            bool topLeftXOutOfBounds;
+            bool topLeftYOutOfBounds;
+            bool topLeftXInverted;
+            bool topLeftYInverted;
+            
+            CoordinatesFor(topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            
+            auto bottomRightX = x + 0.5;
+            auto bottomRightY = y + 0.5;
+            
+            bool bottomRightXOutOfBounds;
+            bool bottomRightYOutOfBounds;
+            bool bottomRightXInverted;
+            bool bottomRightYInverted;
+            
+            CoordinatesFor(bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            
+            double topLeft1;
+            double topLeft2;
+            double topLeft3;
+            
+            if ((horizontalWrap == ClampToBorder && topLeftXOutOfBounds) || (verticalWrap == ClampToBorder && topLeftYOutOfBounds))
+            {
+                topLeft1 = border.X();
+                topLeft2 = border.Y();
+                topLeft3 = border.Z();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(topLeftY) * width + (size_t)floor(topLeftX)) * components;
+                
+                topLeft1 = buffer[position];
+                topLeft2 = buffer[position + 1];
+                topLeft3 = buffer[position + 2];
+            }
+            
+            double topRight1;
+            double topRight2;
+            double topRight3;
+            
+            if ((horizontalWrap == ClampToBorder && bottomRightXOutOfBounds) || (verticalWrap == ClampToBorder && topLeftYOutOfBounds))
+            {
+                topRight1 = border.X();
+                topRight2 = border.Y();
+                topRight3 = border.Z();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(topLeftY) * width + (size_t)floor(bottomRightX)) * components;
+                
+                topRight1 = buffer[position];
+                topRight2 = buffer[position + 1];
+                topRight3 = buffer[position + 2];
+            }
+            
+            double bottomRight1;
+            double bottomRight2;
+            double bottomRight3;
+            
+            if ((horizontalWrap == ClampToBorder && bottomRightXOutOfBounds) || (verticalWrap == ClampToBorder && bottomRightYOutOfBounds))
+            {
+                bottomRight1 = border.X();
+                bottomRight2 = border.Y();
+                bottomRight3 = border.Z();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(bottomRightY) * width + (size_t)floor(bottomRightX)) * components;
+                
+                bottomRight1 = buffer[position];
+                bottomRight2 = buffer[position + 1];
+                bottomRight3 = buffer[position + 2];
+            }
+            
+            double bottomLeft1;
+            double bottomLeft2;
+            double bottomLeft3;
+            
+            if ((horizontalWrap == ClampToBorder && topLeftXOutOfBounds) || (verticalWrap == ClampToBorder && bottomRightYOutOfBounds))
+            {
+                bottomLeft1 = border.X();
+                bottomLeft2 = border.Y();
+                bottomLeft3 = border.Z();
+            }
+            else
+            {
+                size_t position = offset + ((size_t)floor(bottomRightY) * width + (size_t)floor(topLeftX)) * components;
+                
+                bottomLeft1 = buffer[position];
+                bottomLeft2 = buffer[position + 1];
+                bottomLeft3 = buffer[position + 2];
+            }
+            
+            double leftWeight;
+            
+            if (topLeftXInverted)
+            {
+                leftWeight = topLeftX - floor(topLeftX);
+            }
+            else
+            {
+                leftWeight = 1 - topLeftX + floor(topLeftX);
+            }
+            
+            double topWeight;
+            
+            if (topLeftYInverted)
+            {
+                topWeight = topLeftY - floor(topLeftY);
+            }
+            else
+            {
+                topWeight = 1 - topLeftY + floor(topLeftY);
+            }
+            
+            double rightWeight;
+            
+            if (bottomRightXInverted)
+            {
+                rightWeight = 1 - bottomRightX + floor(bottomRightX);
+            }
+            else
+            {
+                rightWeight = bottomRightX - floor(bottomRightX);
+            }
+            
+            double bottomWeight;
+            
+            if (bottomRightYInverted)
+            {
+                bottomWeight = 1 - bottomRightY + floor(bottomRightY);
+            }
+            else
+            {
+                bottomWeight = bottomRightY - floor(bottomRightY);
+            }
+            
+            result.Set(topLeft1 * leftWeight * topWeight + topRight1 * rightWeight * topWeight + bottomRight1 * bottomWeight * rightWeight + bottomLeft1 * bottomWeight * leftWeight, topLeft2 * leftWeight * topWeight + topRight2 * rightWeight * topWeight + bottomRight2 * bottomWeight * rightWeight + bottomLeft2 * bottomWeight * leftWeight, topLeft3 * leftWeight * topWeight + topRight3 * rightWeight * topWeight + bottomRight3 * bottomWeight * rightWeight + bottomLeft3 * bottomWeight * leftWeight);
         }
     }
     
