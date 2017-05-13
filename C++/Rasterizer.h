@@ -39,6 +39,8 @@ namespace MiniVideoCard
         
         void Run();
         
+        void Compact();
+        
         ~Rasterizer();
         
     private:
@@ -61,6 +63,8 @@ namespace MiniVideoCard
         Parameters* parameters;
         
         vector<Fragment*> fragments;
+        
+        size_t fragmentCount;
         
         size_t PositionFor(double x, double y);
         

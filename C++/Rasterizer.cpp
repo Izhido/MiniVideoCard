@@ -25,33 +25,23 @@ namespace MiniVideoCard
 {
     using namespace std;
     
-    Rasterizer::Rasterizer(size_t width, size_t height)
+    Rasterizer::Rasterizer(size_t width, size_t height) : width(width), height(height), vertexShader(nullptr), fragmentShader(nullptr), parameters(nullptr), fragmentCount(0)
     {
-        if (width <= 0)
+        if (width == 0)
         {
             throw runtime_error("Width must be greater than zero.");
         }
 
-        if (height <= 0)
+        if (height == 0)
         {
             throw runtime_error("Height must be greater than zero.");
         }
-        
-        this->width = width;
-        
-        this->height = height;
         
         auto size = width * height;
         
         colorBuffer.resize(size * 4);
         
         depthBuffer.resize(size);
-        
-        vertexShader = nullptr;
-        
-        fragmentShader = nullptr;
-        
-        parameters = nullptr;
     }
         
     size_t Rasterizer::Width()
@@ -338,13 +328,23 @@ namespace MiniVideoCard
         auto endX = right + 2;
         auto endY = top + 2;
         
-        size_t scanWidth = 0;
+        auto scanWidth = (size_t)(endX - left);
+        auto scanHeight = (size_t)(endY - bottom);
+
+        auto fragmentsSize = scanWidth * scanHeight;
         
-        size_t v = 0;
+        if (fragments.size() < fragmentsSize)
+        {
+            fragments.resize(fragmentsSize);
+        }
+        
+        fragmentCount = 0;
+        
+        auto firstY = true;
         
         for (auto y = bottom + 0.5; y < endY; y++)
         {
-            size_t h = 0;
+            auto firstX = true;
             
             for (auto x = left + 0.5; x < endX; x++)
             {
@@ -377,43 +377,51 @@ namespace MiniVideoCard
                     }
                 }
                 
-                fragments.push_back(new Fragment(x, y, z, count1, discarded));
+                if (fragments[fragmentCount] == nullptr)
+                {
+                    fragments[fragmentCount] = new Fragment(x, y, z, count1, discarded);
+                }
+                else
+                {
+                    fragments[fragmentCount]->Set(x, y, z, count1, discarded);
+                }
                 
-                auto& fragmentVaryings = fragments.back()->Varyings();
-
+                auto& fragmentVaryings = fragments[fragmentCount]->Varyings();
+                
                 if (count1 > 0)
                 {
+                    auto projectedA = a / wc1;
+                    auto projectedB = b / wc2;
+                    auto projectedC = c / wc3;
+                    
+                    auto denominator = projectedA + projectedB + projectedC;
+                    
                     for (size_t i = 0; i < count1; i++)
                     {
                         auto fa = vertex1Varyings[i];
                         auto fb = vertex2Varyings[i];
                         auto fc = vertex3Varyings[i];
                         
-                        fragmentVaryings[i] = ((a * fa / wc1) + (b * fb / wc2) + (c * fc / wc3)) / (a / wc1 + b / wc2 + c / wc3);
+                        fragmentVaryings[i] = (fa * projectedA + fb * projectedB + fc * projectedC) / denominator;
                     }
                 }
                 
-				size_t p = v * scanWidth + h;
-				
-				if (h > 0)
+				if (!firstX)
                 {
-                    fragments[p - 1]->SetVaryingsAtRight(&fragmentVaryings);
+                    fragments[fragmentCount - 1]->SetVaryingsAtRight(&fragmentVaryings);
                 }
 
-				if (v > 0)
+				if (!firstY)
 				{
-					fragments[p - scanWidth]->SetVaryingsBelow(&fragmentVaryings);
+					fragments[fragmentCount - scanWidth]->SetVaryingsBelow(&fragmentVaryings);
 				}
                 
-                h++;
+                fragmentCount++;
+                
+                firstX = false;
             }
             
-            if (v == 0)
-            {
-                scanWidth = h;
-            }
-            
-            v++;
+            firstY = false;
         }
 
         for (size_t i = 0; i < fragments.size(); i++)
@@ -467,15 +475,18 @@ namespace MiniVideoCard
             colorBuffer[positionB] = sourceB * sourceA + destinationB * (1 - sourceA);
             colorBuffer[positionA] = sourceA * sourceA + destinationA * (1 - sourceA);
         }
-    
+    }
+
+    void Rasterizer::Compact()
+    {
         for (size_t i = 0; i < fragments.size(); i++)
         {
             delete fragments[i];
         }
         
-        fragments.clear();
+        vector<Fragment*>().swap(fragments);
     }
-
+    
     void Rasterizer::ClearCommands()
     {
         for (size_t i = 0; i < toDelete.size(); i++)
@@ -492,6 +503,8 @@ namespace MiniVideoCard
     
     Rasterizer::~Rasterizer()
     {
+        Compact();
+        
         ClearCommands();
     }
 }

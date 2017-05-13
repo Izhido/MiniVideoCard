@@ -38,6 +38,8 @@ namespace MiniVideoCard
         
         void Discard();
         
+        void Set(double x, double y, double z, size_t varyingCount, bool discarded);
+        
         double DerivativeX(size_t index);
         
         double DerivativeY(size_t index);

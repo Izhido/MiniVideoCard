@@ -94,4 +94,19 @@ namespace MiniVideoCard
         
         return varyingsBelow->at(index) - varyings[index];
     }
+    
+    void Fragment::Set(double x, double y, double z, size_t varyingCount, bool discarded)
+    {
+        position.Set(x, y, z);
+
+        varyingsAtRight = nullptr;
+        varyingsBelow = nullptr;
+        
+        if (varyings.size() != varyingCount)
+        {
+            varyings.resize(varyingCount);
+        }
+
+        this->discarded = discarded;
+    }
 }
