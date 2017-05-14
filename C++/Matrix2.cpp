@@ -122,17 +122,17 @@ namespace MiniVideoCard
     
     void Matrix2::Set(const Matrix2& source)
     {
-        *(this->source) = *(source.source);
+        Set(source.M11(), source.M21(), source.M12(), source.M22());
     }
     
     void Matrix2::Premultiply(const Matrix2& left, Matrix2& result) const
     {
-        result.Set(left.M11() * M11() + left.M21() * M12(), left.M12() * M11() + left.M22() * M12(), left.M11() * M21() + left.M21() * M22(), left.M12() * M21() + left.M22() * M22());
+        result.Set(left.M11() * M11() + left.M21() * M12(), left.M11() * M21() + left.M21() * M22(), left.M12() * M11() + left.M22() * M12(), left.M12() * M21() + left.M22() * M22());
     }
     
     void Matrix2::Postmultiply(const Matrix2& right, Matrix2& result) const
     {
-        result.Set(M11() * right.M11() + M21() * right.M12(), M12() * right.M11() + M22() * right.M12(), M11() * right.M21() + M21() * right.M22(), M12() * right.M21() + M22() * right.M22());
+        result.Set(M11() * right.M11() + M21() * right.M12(), M11() * right.M21() + M21() * right.M22(), M12() * right.M11() + M22() * right.M12(), M12() * right.M21() + M22() * right.M22());
     }
 
     void Matrix2::Postmultiply(const Vector2& right, Vector2& result) const

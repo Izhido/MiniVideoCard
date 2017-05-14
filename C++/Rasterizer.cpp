@@ -424,7 +424,7 @@ namespace MiniVideoCard
             firstY = false;
         }
 
-        for (size_t i = 0; i < fragments.size(); i++)
+        for (size_t i = 0; i < fragmentCount; i++)
         {
             auto fragment = fragments[i];
 
@@ -436,7 +436,7 @@ namespace MiniVideoCard
             fragmentShader->Run(fragment, parameters);
         }
     
-        for (size_t i = 0; i < fragments.size(); i++)
+        for (size_t i = 0; i < fragmentCount; i++)
         {
             auto fragment = fragments[i];
             

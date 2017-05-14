@@ -129,6 +129,14 @@ namespace MiniVideoCard
         
         void SetScale(Vector4& scale);
         
+        void SetRotationX(double angle);
+        
+        void SetRotationY(double angle);
+        
+        void SetRotationZ(double angle);
+        
+        void SetRotation(double angle, const Vector3& direction);
+        
         void SetLookAt(const Vector3& eye, const Vector3& center, const Vector3& up);
         
         void SetPerspective(double verticalFieldOfView, double aspectRatio, double near, double far);

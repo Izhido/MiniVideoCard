@@ -182,7 +182,7 @@ namespace MiniVideoCard
     
     void Matrix3::Set(const Matrix3& source)
     {
-        *(this->source) = *(source.source);
+        Set(source.M11(), source.M21(), source.M31(), source.M12(), source.M22(), source.M32(), source.M13(), source.M23(), source.M33());
     }
 
     void Matrix3::Set(Matrix2& source)
@@ -192,12 +192,12 @@ namespace MiniVideoCard
     
     void Matrix3::Premultiply(const Matrix3& left, Matrix3& result) const
     {
-        result.Set(left.M11() * M11() + left.M21() * M12() + left.M31() * M13(), left.M12() * M11() + left.M22() * M12() + left.M32() * M13(), left.M13() * M11() + left.M23() * M12() + left.M33() * M13(), left.M11() * M21() + left.M21() * M22() + left.M31() * M23(), left.M12() * M21() + left.M22() * M22() + left.M32() * M23(), left.M13() * M21() + left.M23() * M22() + left.M33() * M23(), left.M11() * M31() + left.M21() * M32() + left.M31() * M33(), left.M12() * M31() + left.M22() * M32() + left.M32() * M33(), left.M13() * M31() + left.M23() * M32() + left.M33() * M33());
+        result.Set(left.M11() * M11() + left.M21() * M12() + left.M31() * M13(), left.M11() * M21() + left.M21() * M22() + left.M31() * M23(), left.M11() * M31() + left.M21() * M32() + left.M31() * M33(), left.M12() * M11() + left.M22() * M12() + left.M32() * M13(), left.M12() * M21() + left.M22() * M22() + left.M32() * M23(), left.M12() * M31() + left.M22() * M32() + left.M32() * M33(), left.M13() * M11() + left.M23() * M12() + left.M33() * M13(), left.M13() * M21() + left.M23() * M22() + left.M33() * M23(), left.M13() * M31() + left.M23() * M32() + left.M33() * M33());
     }
     
     void Matrix3::Postmultiply(const Matrix3& right, Matrix3& result) const
     {
-        result.Set(M11() * right.M11() + M21() * right.M12() + M31() * right.M13(), M12() * right.M11() + M22() * right.M12() + M32() * right.M13(), M13() * right.M11() + M23() * right.M12() + M33() * right.M13(), M11() * right.M21() + M21() * right.M22() + M31() * right.M23(), M12() * right.M21() + M22() * right.M22() + M32() * right.M23(), M13() * right.M21() + M23() * right.M22() + M33() * right.M23(), M11() * right.M31() + M21() * right.M32() + M31() * right.M33(), M12() * right.M31() + M22() * right.M32() + M32() * right.M33(), M13() * right.M31() + M23() * right.M32() + M33() * right.M33());
+        result.Set(M11() * right.M11() + M21() * right.M12() + M31() * right.M13(), M11() * right.M21() + M21() * right.M22() + M31() * right.M23(), M11() * right.M31() + M21() * right.M32() + M31() * right.M33(), M12() * right.M11() + M22() * right.M12() + M32() * right.M13(), M12() * right.M21() + M22() * right.M22() + M32() * right.M23(), M12() * right.M31() + M22() * right.M32() + M32() * right.M33(), M13() * right.M11() + M23() * right.M12() + M33() * right.M13(), M13() * right.M21() + M23() * right.M22() + M33() * right.M23(), M13() * right.M31() + M23() * right.M32() + M33() * right.M33());
     }
     
     void Matrix3::Postmultiply(const Vector3& right, Vector3& result) const

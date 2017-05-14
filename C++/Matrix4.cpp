@@ -265,7 +265,7 @@ namespace MiniVideoCard
 
     void Matrix4::Set(const Matrix4& source)
     {
-        *(this->source) = *(source.source);
+        Set(source.M11(), source.M21(), source.M31(), source.M41(), source.M12(), source.M22(), source.M32(), source.M42(), source.M13(), source.M23(), source.M33(), source.M43(), source.M14(), source.M24(), source.M34(), source.M44());
     }
     
     void Matrix4::Set(Matrix3& source)
@@ -328,6 +328,42 @@ namespace MiniVideoCard
         SetScale(scale.X(), scale.Y(), scale.Z());
     }
     
+    void Matrix4::SetRotationX(double angle)
+    {
+        auto angleSin = sin(angle);
+        auto angleCos = cos(angle);
+        
+        Set(1, 0, 0, 0, 0, angleCos, angleSin, 0, 0, -angleSin, angleCos, 0, 0, 0, 0, 1);
+    }
+    
+    void Matrix4::SetRotationY(double angle)
+    {
+        auto angleSin = sin(angle);
+        auto angleCos = cos(angle);
+        
+        Set(angleCos, 0, -angleSin, 0, 0, 1, 0, 0, angleSin, 0, angleCos, 0, 0, 0, 0, 1);
+    }
+    
+    void Matrix4::SetRotationZ(double angle)
+    {
+        auto angleSin = sin(angle);
+        auto angleCos = cos(angle);
+        
+        Set(angleCos, angleSin, 0, 0, -angleSin, angleCos, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    }
+    
+    void Matrix4::SetRotation(double angle, const Vector3& direction)
+    {
+        auto angleSin = sin(angle);
+        auto angleCos = cos(angle);
+        auto oneMinusAngleCos = 1 - angleCos;
+        
+        auto normalized = direction;
+        normalized.Normalize();
+        
+        Set(normalized.X() * normalized.X() * oneMinusAngleCos + angleCos, normalized.Y() * normalized.X() * oneMinusAngleCos + normalized.Z() * angleSin, normalized.Z() * normalized.X() * oneMinusAngleCos - normalized.Y() * angleSin, 0, normalized.X() * normalized.Y() * oneMinusAngleCos - normalized.Z() * angleSin, normalized.Y() * normalized.Y() * oneMinusAngleCos + angleCos, normalized.Z() * normalized.Y() * oneMinusAngleCos + normalized.X() * angleSin, 0, normalized.X() * normalized.Z() * oneMinusAngleCos + normalized.Y() * angleSin, normalized.Y() * normalized.Z() * oneMinusAngleCos - normalized.X() * angleSin, normalized.Z() * normalized.Z() * oneMinusAngleCos + angleCos, 0, 0, 0, 0, 1);
+    }
+    
     void Matrix4::SetLookAt(const Vector3& eye, const Vector3& center, const Vector3& up)
     {
         auto f = center - eye;
@@ -376,12 +412,12 @@ namespace MiniVideoCard
     
     void Matrix4::Premultiply(const Matrix4& left, Matrix4& result) const
     {
-        result.Set(left.M11() * M11() + left.M21() * M12() + left.M31() * M13() + left.M41() * M14(), left.M12() * M11() + left.M22() * M12() + left.M32() * M13() + left.M42() * M14(), left.M13() * M11() + left.M23() * M12() + left.M33() * M13() + left.M43() * M14(), left.M14() * M11() + left.M24() * M12() + left.M34() * M13() + left.M44() * M14(), left.M11() * M21() + left.M21() * M22() + left.M31() * M23() + left.M41() * M24(), left.M12() * M21() + left.M22() * M22() + left.M32() * M23() + left.M42() * M24(), left.M13() * M21() + left.M23() * M22() + left.M33() * M23() + left.M43() * M24(), left.M14() * M21() + left.M24() * M22() + left.M34() * M23() + left.M44() * M24(), left.M11() * M31() + left.M21() * M32() + left.M31() * M33() + left.M41() * M34(), left.M12() * M31() + left.M22() * M32() + left.M32() * M33() + left.M42() * M34(), left.M13() * M31() + left.M23() * M32() + left.M33() * M33() + left.M43() * M34(), left.M14() * M31() + left.M24() * M32() + left.M34() * M33() + left.M44() * M34(), left.M11() * M41() + left.M21() * M42() + left.M31() * M43() + left.M41() * M44(), left.M12() * M41() + left.M22() * M42() + left.M32() * M43() + left.M42() * M44(), left.M13() * M41() + left.M23() * M42() + left.M33() * M43() + left.M43() * M44(), left.M14() * M41() + left.M24() * M42() + left.M34() * M43() + left.M44() * M44());
+        result.Set(left.M11() * M11() + left.M21() * M12() + left.M31() * M13() + left.M41() * M14(), left.M11() * M21() + left.M21() * M22() + left.M31() * M23() + left.M41() * M24(), left.M11() * M31() + left.M21() * M32() + left.M31() * M33() + left.M41() * M34(), left.M11() * M41() + left.M21() * M42() + left.M31() * M43() + left.M41() * M44(), left.M12() * M11() + left.M22() * M12() + left.M32() * M13() + left.M42() * M14(), left.M12() * M21() + left.M22() * M22() + left.M32() * M23() + left.M42() * M24(), left.M12() * M31() + left.M22() * M32() + left.M32() * M33() + left.M42() * M34(), left.M12() * M41() + left.M22() * M42() + left.M32() * M43() + left.M42() * M44(), left.M13() * M11() + left.M23() * M12() + left.M33() * M13() + left.M43() * M14(), left.M13() * M21() + left.M23() * M22() + left.M33() * M23() + left.M43() * M24(), left.M13() * M31() + left.M23() * M32() + left.M33() * M33() + left.M43() * M34(), left.M13() * M41() + left.M23() * M42() + left.M33() * M43() + left.M43() * M44(), left.M14() * M11() + left.M24() * M12() + left.M34() * M13() + left.M44() * M14(), left.M14() * M21() + left.M24() * M22() + left.M34() * M23() + left.M44() * M24(), left.M14() * M31() + left.M24() * M32() + left.M34() * M33() + left.M44() * M34(), left.M14() * M41() + left.M24() * M42() + left.M34() * M43() + left.M44() * M44());
     }
     
     void Matrix4::Postmultiply(const Matrix4& right, Matrix4& result) const
     {
-        result.Set(M11() * right.M11() + M21() * right.M12() + M31() * right.M13() + M41() * right.M14(), M12() * right.M11() + M22() * right.M12() + M32() * right.M13() + M42() * right.M14(), M13() * right.M11() + M23() * right.M12() + M33() * right.M13() + M43() * right.M14(), M14() * right.M11() + M24() * right.M12() + M34() * right.M13() + M44() * right.M14(), M11() * right.M21() + M21() * right.M22() + M31() * right.M23() + M41() * right.M24(), M12() * right.M21() + M22() * right.M22() + M32() * right.M23() + M42() * right.M24(), M13() * right.M21() + M23() * right.M22() + M33() * right.M23() + M43() * right.M24(), M14() * right.M21() + M24() * right.M22() + M34() * right.M23() + M44() * right.M24(), M11() * right.M31() + M21() * right.M32() + M31() * right.M33() + M41() * right.M34(), M12() * right.M31() + M22() * right.M32() + M32() * right.M33() + M42() * right.M34(), M13() * right.M31() + M23() * right.M32() + M33() * right.M33() + M43() * right.M34(), M14() * right.M31() + M24() * right.M32() + M34() * right.M33() + M44() * right.M34(), M11() * right.M41() + M21() * right.M42() + M31() * right.M43() + M41() * right.M44(), M12() * right.M41() + M22() * right.M42() + M32() * right.M43() + M42() * right.M44(), M13() * right.M41() + M23() * right.M42() + M33() * right.M43() + M43() * right.M44(), M14() * right.M41() + M24() * right.M42() + M34() * right.M43() + M44() * right.M44());
+        result.Set(M11() * right.M11() + M21() * right.M12() + M31() * right.M13() + M41() * right.M14(), M11() * right.M21() + M21() * right.M22() + M31() * right.M23() + M41() * right.M24(), M11() * right.M31() + M21() * right.M32() + M31() * right.M33() + M41() * right.M34(), M11() * right.M41() + M21() * right.M42() + M31() * right.M43() + M41() * right.M44(), M12() * right.M11() + M22() * right.M12() + M32() * right.M13() + M42() * right.M14(), M12() * right.M21() + M22() * right.M22() + M32() * right.M23() + M42() * right.M24(), M12() * right.M31() + M22() * right.M32() + M32() * right.M33() + M42() * right.M34(), M12() * right.M41() + M22() * right.M42() + M32() * right.M43() + M42() * right.M44(), M13() * right.M11() + M23() * right.M12() + M33() * right.M13() + M43() * right.M14(), M13() * right.M21() + M23() * right.M22() + M33() * right.M23() + M43() * right.M24(), M13() * right.M31() + M23() * right.M32() + M33() * right.M33() + M43() * right.M34(), M13() * right.M41() + M23() * right.M42() + M33() * right.M43() + M43() * right.M44(), M14() * right.M11() + M24() * right.M12() + M34() * right.M13() + M44() * right.M14(), M14() * right.M21() + M24() * right.M22() + M34() * right.M23() + M44() * right.M24(), M14() * right.M31() + M24() * right.M32() + M34() * right.M33() + M44() * right.M34(), M14() * right.M41() + M24() * right.M42() + M34() * right.M43() + M44() * right.M44());
     }
 
     void Matrix4::Postmultiply(const Vector4& right, Vector4& result) const

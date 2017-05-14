@@ -117,7 +117,7 @@ namespace MiniVideoCard
     
     void Vector3::Set(const Vector3& source)
     {
-        *(this->source) = *(source.source);
+        Set(source.X(), source.Y(), source.Z());
     }
     
     void Vector3::Set(Vector2& source, double z)

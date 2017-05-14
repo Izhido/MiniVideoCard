@@ -150,7 +150,7 @@ namespace MiniVideoCard
     
     void Vector2::Set(const Vector2& source)
     {
-        *(this->source) = *(source.source);
+        Set(source.X(), source.Y());
     }
 
     Vector2& Vector2::operator=(const Vector2& right)

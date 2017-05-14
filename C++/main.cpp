@@ -28,6 +28,8 @@
 #include <string>
 #include "Matrix4.h"
 
+#define M_PI 3.14159265358979323846
+
 using namespace MiniVideoCard;
 using namespace std;
 
@@ -136,6 +138,54 @@ class TexturedFragmentShader : public FragmentShader
         Vector2 texcoords(&fragment->Varyings(), 0);
         
         auto p = (TexturedParameters *)parameters;
+        
+        p->sampler->Sample(*p->texture, texcoords, *fragment, fragment->Color());
+    }
+};
+
+class CombinedData : public Data
+{
+    public: Vector3 position; Vector3 normal; Vector2 texcoords;
+    
+    CombinedData(double x, double y, double z, double nx, double ny, double nz, double s, double t) : position(x, y, z), normal(nx, ny, nz), texcoords(s, t) {}
+};
+
+class CombinedParameters : public Parameters
+{
+public: Matrix4* model; Matrix4* view; Matrix4* projection; Texture2* texture; Sampler2* sampler;
+    
+    CombinedParameters(Matrix4* model, Matrix4* view, Matrix4* projection, Texture2* texture, Sampler2* sampler) : model(model), view(view), projection(projection), texture(texture), sampler(sampler) {}
+};
+
+class CombinedVertexShader : public VertexShader
+{
+    public: void Run(Data* data, Vertex* vertex, Parameters* parameters)
+    {
+        auto d = (CombinedData *)data;
+        
+        auto p = (CombinedParameters *)parameters;
+        
+        vertex->Position() = *p->projection * (*p->view * (*p->model * d->position));
+        
+        vertex->Varyings().resize(5);
+        
+        Vector3 normal(&vertex->Varyings(), 0);
+        
+        normal = d->normal;
+
+        Vector2 texcoords(&vertex->Varyings(), 3);
+
+        texcoords = d->texcoords;
+    }
+};
+
+class CombinedFragmentShader : public FragmentShader
+{
+    public: void Run(Fragment* fragment, Parameters* parameters)
+    {
+        Vector2 texcoords(&fragment->Varyings(), 3);
+        
+        auto p = (CombinedParameters *)parameters;
         
         p->sampler->Sample(*p->texture, texcoords, *fragment, fragment->Color());
     }
@@ -346,7 +396,7 @@ int main(int argc, const char * argv[])
     view.SetLookAt(Vector3(0, 0.5, 2), Vector3(0, 0, 0), Vector3(0, 1, 0));
     
     Matrix4 projection;
-    projection.SetPerspective(3.14159265358979323846 / 4.0, (double)rasterizer.Width() / (double)rasterizer.Height(), 0.1, 10);
+    projection.SetPerspective(M_PI / 4, (double)rasterizer.Width() / (double)rasterizer.Height(), 0.1, 10);
     
 	TexturedParameters texturedParameters1(&model, &view, &projection, &texture3, &sampler1);
     TexturedParameters texturedParameters2(&model, &view, &projection, &texture4, &sampler2);
@@ -425,12 +475,12 @@ int main(int argc, const char * argv[])
     sampler1.SetHorizontalWrap(ClampToBorder);
     sampler1.SetVerticalWrap(ClampToBorder);
     
-    sampler1.Border().Set(1.0, 1.0, 0.0);
+    sampler1.Border().Set(1, 1, 0.0);
 
     sampler2.SetHorizontalWrap(ClampToBorder);
     sampler2.SetVerticalWrap(ClampToBorder);
     
-    sampler2.Border().Set(0.0, 1.0, 1.0);
+    sampler2.Border().Set(0, 1, 1.0);
     
     rasterizer.AddCommand(true, new ClearColorBuffer(0.5, 0.5, 0.5, 1));
     rasterizer.AddCommand(true, new ClearDepthBuffer());
@@ -442,6 +492,239 @@ int main(int argc, const char * argv[])
     rasterizer.Run();
     
     WriteBitmap(rasterizer.Width(), rasterizer.Height(), rasterizer.ColorBuffer(), 0, "test8.bmp");
+
+    Texture2 texture5(64, 64, 4, true);
     
+    auto& b5 = texture5.Buffer();
+    
+    p = 0;
+    
+    for (size_t j = 0; j < 64; j++)
+    {
+        size_t v = (j / 16) % 2;
+        
+        for (size_t i = 0; i < 64; i++)
+        {
+            size_t h = (i / 16) % 2;
+            
+            if (v == h)
+            {
+                b5[p] = 1;
+                b5[p + 1] = 1;
+                b5[p + 2] = 1;
+            }
+            
+            b5[p + 3] = 0.25;
+            
+            p += 4;
+        }
+    }
+    
+    sampler2.GenerateMipmaps(texture5);
+
+    vertices.push_back(new CombinedData(-8, -0.25, -8, 0, 1, 0, 0, 0));
+    vertices.push_back(new CombinedData(8, -0.25, -8, 0, 1, 0, 16, 0));
+    vertices.push_back(new CombinedData(8, -0.25, 4, 0, 1, 0, 16, 24));
+    vertices.push_back(new CombinedData(-8, -0.25, 4, 0, 1, 0, 0, 24));
+    
+    vertices.push_back(new CombinedData(-0.5, -0.5, -0.5, 0, 0, -1, 0, 0));
+    vertices.push_back(new CombinedData(0.5, -0.5, -0.5, 0, 0, -1, 1, 0));
+    vertices.push_back(new CombinedData(0.5, 0.5, -0.5, 0, 0, -1, 1, 1));
+    vertices.push_back(new CombinedData(-0.5, 0.5, -0.5, 0, 0, -1, 0, 1));
+    vertices.push_back(new CombinedData(-0.5, -0.5, 0.5, 0, 0, 1, 0, 0));
+    vertices.push_back(new CombinedData(0.5, -0.5, 0.5, 0, 0, 1, 1, 0));
+    vertices.push_back(new CombinedData(0.5, 0.5, 0.5, 0, 0, 1, 1, 1));
+    vertices.push_back(new CombinedData(-0.5, 0.5, 0.5, 0, 0, 1, 0, 1));
+    vertices.push_back(new CombinedData(-0.5, 0.5, 0.5, -1, 0, 0, 0, 0));
+    vertices.push_back(new CombinedData(-0.5, 0.5, -0.5, -1, 0, 0, 1, 0));
+    vertices.push_back(new CombinedData(-0.5, -0.5, -0.5, -1, 0, 0, 1, 1));
+    vertices.push_back(new CombinedData(-0.5, -0.5, 0.5, -1, 0, 0, 0, 1));
+    vertices.push_back(new CombinedData(0.5, 0.5, 0.5, 1, 0, 0, 0, 0));
+    vertices.push_back(new CombinedData(0.5, 0.5, -0.5, 1, 0, 0, 1, 0));
+    vertices.push_back(new CombinedData(0.5, -0.5, -0.5, 1, 0, 0, 1, 1));
+    vertices.push_back(new CombinedData(0.5, -0.5, 0.5, 1, 0, 0, 0, 1));
+    vertices.push_back(new CombinedData(-0.5, -0.5, -0.5, 0, -1, 0, 0, 0));
+    vertices.push_back(new CombinedData(0.5, -0.5, -0.5, 0, -1, 0, 1, 0));
+    vertices.push_back(new CombinedData(0.5, -0.5, 0.5, 0, -1, 0, 1, 1));
+    vertices.push_back(new CombinedData(-0.5, -0.5, 0.5, 0, -1, 0, 0, 1));
+    vertices.push_back(new CombinedData(-0.5, 0.5, -0.5, 0, 1, 0, 0, 0));
+    vertices.push_back(new CombinedData(0.5, 0.5, -0.5, 0, 1, 0, 1, 0));
+    vertices.push_back(new CombinedData(0.5, 0.5, 0.5, 0, 1, 0, 1, 1));
+    vertices.push_back(new CombinedData(-0.5, 0.5, 0.5, 0, 1, 0, 0, 1));
+
+    indices.clear();
+    
+    indices.push_back(20);
+    indices.push_back(21);
+    indices.push_back(22);
+    indices.push_back(22);
+    indices.push_back(23);
+    indices.push_back(20);
+
+    for (size_t i = 0; i < 6; i++)
+    {
+        indices.push_back(24 + i * 4);
+        indices.push_back(24 + i * 4 + 1);
+        indices.push_back(24 + i * 4 + 2);
+        indices.push_back(24 + i * 4 + 2);
+        indices.push_back(24 + i * 4 + 3);
+        indices.push_back(24 + i * 4);
+    }
+
+    projection.SetPerspective(M_PI / 4, (double)rasterizer.Width() / (double)rasterizer.Height(), 0.1, 20);
+
+    view.SetLookAt(Vector3(0, 5, 5), Vector3(0, 0, 0), Vector3(0, 1, -1));
+    
+    CombinedVertexShader combinedVertexShader;
+
+    CombinedFragmentShader combinedFragmentShader;
+    
+    CombinedParameters combinedParameters1(&model, &view, &projection, &texture5, &sampler2);
+    
+    sampler2.SetHorizontalWrap(Repeat);
+    sampler2.SetVerticalWrap(Repeat);
+    
+    rasterizer.AddCommand(true, new ClearColorBuffer(0.25, 0.25, 0.25, 1));
+    rasterizer.AddCommand(true, new ClearDepthBuffer());
+    rasterizer.AddCommand(true, new UseVertexShader(false, &combinedVertexShader));
+    rasterizer.AddCommand(true, new UseFragmentShader(false, &combinedFragmentShader));
+    rasterizer.AddCommand(true, new SetParameters(false, &combinedParameters1));
+
+    model.SetIdentity();
+
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 0, 6));
+
+    rasterizer.Run();
+    
+    CombinedParameters combinedParameters2(&model, &view, &projection, &texture2, &sampler2);
+    
+    rasterizer.AddCommand(true, new SetParameters(false, &combinedParameters2));
+
+    Matrix4 translation;
+    Matrix4 scale;
+    Matrix4 rotation;
+    
+    translation.SetTranslation(2, 0, -4);
+    scale.SetScale(0.25);
+    rotation.SetRotationX(M_PI / 6);
+    
+    model = rotation * scale * translation;
+
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    translation.SetTranslation(0, 0, -4);
+    scale.SetScale(0.5);
+    rotation.SetRotationX(0);
+    
+    model = rotation * scale * translation;
+
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+
+    rasterizer.Run();
+    
+    translation.SetTranslation(-2, 0, -4);
+    scale.SetScale(0.75);
+    rotation.SetRotationX(-M_PI / 6);
+    
+    model = rotation * scale * translation;
+    
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    translation.SetTranslation(2, 0, -2);
+    scale.SetScale(0.5);
+    rotation.SetRotationY(M_PI / 6);
+    
+    model = rotation * scale * translation;
+    
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    translation.SetTranslation(0, 0, -2);
+    scale.SetScale(0.75);
+    rotation.SetRotationY(0);
+    
+    model = rotation * scale * translation;
+    
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    translation.SetTranslation(-2, 0, -2);
+    scale.SetScale(0.25);
+    rotation.SetRotationY(-M_PI / 6);
+    
+    model = rotation * scale * translation;
+    
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    translation.SetTranslation(2, 0, 0);
+    scale.SetScale(0.75);
+    rotation.SetRotationZ(M_PI / 6);
+    
+    model = rotation * scale * translation;
+    
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    translation.SetTranslation(0, 0, 0);
+    scale.SetScale(0.25);
+    rotation.SetRotationZ(0);
+    
+    model = rotation * scale * translation;
+    
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    translation.SetTranslation(-2, 0, 0);
+    scale.SetScale(0.5);
+    rotation.SetRotationZ(-M_PI / 6);
+    
+    model = rotation * scale * translation;
+    
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    translation.SetTranslation(2, 0, 2);
+    scale.SetScale(0.25);
+    rotation.SetRotation(M_PI / 6, Vector3(1, 1, 1));
+    
+    model = rotation * scale * translation;
+    
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    translation.SetTranslation(0, 0, 2);
+    scale.SetScale(0.5);
+    rotation.SetRotation(0, Vector3(1, 1, 1));
+    
+    model = rotation * scale * translation;
+    
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    translation.SetTranslation(-2, 0, 2);
+    scale.SetScale(0.75);
+    rotation.SetRotation(-M_PI / 6, Vector3(1, 1, 1));
+    
+    model = rotation * scale * translation;
+    
+    rasterizer.AddCommand(true, new Draw(false, &vertices, false, &indices, 6, 36));
+    
+    rasterizer.Run();
+    
+    WriteBitmap(rasterizer.Width(), rasterizer.Height(), rasterizer.ColorBuffer(), 0, "test9.bmp");
+
     return 0;
 }
