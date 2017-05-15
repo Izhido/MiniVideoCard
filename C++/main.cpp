@@ -401,14 +401,14 @@ int main(int argc, const char * argv[])
 	TexturedParameters texturedParameters1(&model, &view, &projection, &texture3, &sampler1);
     TexturedParameters texturedParameters2(&model, &view, &projection, &texture4, &sampler2);
     
-    vertices.push_back(new TexturedData(-8, 0, 1, -16, -2));
-    vertices.push_back(new TexturedData(0, 0, 1, 2, -2));
-    vertices.push_back(new TexturedData(0, 0, -8, 2, 16));
-    vertices.push_back(new TexturedData(-8, 0, -8, -16, 16));
-    vertices.push_back(new TexturedData(0, 0, 1, -2, -2));
-    vertices.push_back(new TexturedData(8, 0, 1, 16, -2));
-    vertices.push_back(new TexturedData(8, 0, -8, 16, 16));
-    vertices.push_back(new TexturedData(0, 0, -8, -2, 16));
+    vertices.push_back(new TexturedData(-8, 0, 1, -16, 2));
+    vertices.push_back(new TexturedData(0, 0, 1, 2, 2));
+    vertices.push_back(new TexturedData(0, 0, -8, 2, -16));
+    vertices.push_back(new TexturedData(-8, 0, -8, -16, -16));
+    vertices.push_back(new TexturedData(0, 0, 1, -1, 2));
+    vertices.push_back(new TexturedData(8, 0, 1, 17, 2));
+    vertices.push_back(new TexturedData(8, 0, -8, 17, -16));
+    vertices.push_back(new TexturedData(0, 0, -8, -1, -16));
 
     vector<size_t> indices;
     

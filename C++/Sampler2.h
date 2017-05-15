@@ -60,8 +60,8 @@ namespace MiniVideoCard
 
         void FilterAndLevelFor(Texture2& texture, Vector2& position, Fragment& fragment, Filter& filter, size_t& level);
         
-        void CoordinateFor(double& coordinate, bool& outOfBounds, bool& inverted, double size, Wrap wrap);
+        void CoordinateFor(double raw, double& coordinate, bool& outOfBounds, bool& inverted, double size, Wrap wrap);
         
-        void CoordinatesFor(double& x, double& y, bool& xOutOfBounds, bool& yOutOfBounds, bool& xInverted, bool& yInverted, double width, double height);
+        void CoordinatesFor(double s, double t, double& x, double& y, bool& xOutOfBounds, bool& yOutOfBounds, bool& xInverted, bool& yInverted, double width, double height);
 	};
 }

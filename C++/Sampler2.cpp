@@ -254,65 +254,60 @@ namespace MiniVideoCard
         }
     }
 
-    void Sampler2::CoordinateFor(double& coordinate, bool& outOfBounds, bool& inverted, double size, Wrap wrap)
+    void Sampler2::CoordinateFor(double raw, double& coordinate, bool& outOfBounds, bool& inverted, double size, Wrap wrap)
     {
         outOfBounds = false;
         inverted = false;
         
         if (wrap == Repeat)
         {
-            auto c = coordinate / size;
-            
-            coordinate = size * (c - floor(c));
+            coordinate = size * (raw - floor(raw));
         }
         else if (wrap == MirroredRepeat)
         {
-            auto c = coordinate / size;
-            
-            if (fmod(floor(c), 2) == 0)
+            if (fmod(floor(raw), 2) == 0)
             {
-                coordinate = size * (c - floor(c));
+                coordinate = size * (raw - floor(raw));
             }
             else
             {
                 inverted = true;
                 
-                if (coordinate >= 0)
+                if (raw >= 0)
                 {
-                    coordinate = size * (-c - floor(-c));
+                    coordinate = size * (-raw - floor(-raw));
                 }
                 else
                 {
-                    coordinate = -(size * (c - trunc(c)));
+                    coordinate = -(size * (raw - trunc(raw)));
                 }
             }
         }
+        else if (raw < 0)
+        {
+            coordinate = raw * size - floor(raw * size);
+            
+            outOfBounds = true;
+        }
+        else if (raw >= 1)
+        {
+            coordinate = size - 1 + raw * size - floor(raw * size);
+            
+            outOfBounds = true;
+        }
         else
         {
-            auto decimalPart = coordinate - floor(coordinate);
-            
-            if (coordinate < 0)
-            {
-                coordinate = decimalPart;
-                
-                outOfBounds = true;
-            }
-            else if (coordinate >= size)
-            {
-                coordinate = size - 1 + decimalPart;
-                
-                outOfBounds = true;
-            }
+            coordinate = raw * size;
         }
     }
 
-    void Sampler2::CoordinatesFor(double& x, double& y, bool& xOutOfBounds, bool& yOutOfBounds, bool& xInverted, bool& yInverted, double width, double height)
+    void Sampler2::CoordinatesFor(double s, double t, double& x, double& y, bool& xOutOfBounds, bool& yOutOfBounds, bool& xInverted, bool& yInverted, double width, double height)
     {
-        CoordinateFor(x, xOutOfBounds, xInverted, width, horizontalWrap);
+        CoordinateFor(s, x, xOutOfBounds, xInverted, width, horizontalWrap);
         
-        CoordinateFor(y, yOutOfBounds, yInverted, height, verticalWrap);
+        CoordinateFor(t, y, yOutOfBounds, yInverted, height, verticalWrap);
     }
-    
+
     double Sampler2::Sample(Texture2& texture, Vector2& position, Fragment& fragment)
     {
         auto components = texture.Components();
@@ -337,17 +332,20 @@ namespace MiniVideoCard
         auto widthAsFloatingPoint = (double)width;
         auto heightAsFloatingPoint = (double)height;
         
-        auto x = position.X() * widthAsFloatingPoint;
-        auto y = position.Y() * heightAsFloatingPoint;
+        auto s = position.X();
+        auto t = position.Y();
         
         if (filter == NearestNeighbor)
         {
+            double x;
+            double y;
+            
             bool xOutOfBounds;
             bool yOutOfBounds;
             bool xInverted;
             bool yInverted;
             
-            CoordinatesFor(x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(s, t, x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
             if ((horizontalWrap == ClampToBorder && xOutOfBounds) || (verticalWrap == ClampToBorder && yOutOfBounds))
             {
@@ -362,25 +360,34 @@ namespace MiniVideoCard
         }
         else
         {
-            auto topLeftX = x - 0.5;
-            auto topLeftY = y - 0.5;
+            auto halfHorizontal = 1.0 / (widthAsFloatingPoint * 2);
+            auto halfVertical = 1.0 / (heightAsFloatingPoint * 2);
+            
+            auto topLeftS = s - halfHorizontal;
+            auto topLeftT = t - halfVertical;
+            
+            double topLeftX;
+            double topLeftY;
             
             bool topLeftXOutOfBounds;
             bool topLeftYOutOfBounds;
             bool topLeftXInverted;
             bool topLeftYInverted;
             
-            CoordinatesFor(topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(topLeftS, topLeftT, topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
-            auto bottomRightX = x + 0.5;
-            auto bottomRightY = y + 0.5;
+            auto bottomRightS = s + halfHorizontal;
+            auto bottomRightT = t + halfVertical;
+            
+            double bottomRightX;
+            double bottomRightY;
             
             bool bottomRightXOutOfBounds;
             bool bottomRightYOutOfBounds;
             bool bottomRightXInverted;
             bool bottomRightYInverted;
             
-            CoordinatesFor(bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(bottomRightS, bottomRightT, bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
             double topLeft;
             
@@ -506,17 +513,20 @@ namespace MiniVideoCard
         auto widthAsFloatingPoint = (double)width;
         auto heightAsFloatingPoint = (double)height;
         
-        auto x = position.X() * widthAsFloatingPoint;
-        auto y = position.Y() * heightAsFloatingPoint;
+        auto s = position.X();
+        auto t = position.Y();
         
         if (filter == NearestNeighbor)
         {
+            double x;
+            double y;
+            
             bool xOutOfBounds;
             bool yOutOfBounds;
             bool xInverted;
             bool yInverted;
             
-            CoordinatesFor(x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(s, t, x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
             if ((horizontalWrap == ClampToBorder && xOutOfBounds) || (verticalWrap == ClampToBorder && yOutOfBounds))
             {
@@ -531,25 +541,34 @@ namespace MiniVideoCard
         }
         else
         {
-            auto topLeftX = x - 0.5;
-            auto topLeftY = y - 0.5;
+            auto halfHorizontal = 1.0 / (widthAsFloatingPoint * 2);
+            auto halfVertical = 1.0 / (heightAsFloatingPoint * 2);
+            
+            auto topLeftS = s - halfHorizontal;
+            auto topLeftT = t - halfVertical;
+            
+            double topLeftX;
+            double topLeftY;
             
             bool topLeftXOutOfBounds;
             bool topLeftYOutOfBounds;
             bool topLeftXInverted;
             bool topLeftYInverted;
             
-            CoordinatesFor(topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(topLeftS, topLeftT, topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
-            auto bottomRightX = x + 0.5;
-            auto bottomRightY = y + 0.5;
+            auto bottomRightS = s + halfHorizontal;
+            auto bottomRightT = t + halfVertical;
+            
+            double bottomRightX;
+            double bottomRightY;
             
             bool bottomRightXOutOfBounds;
             bool bottomRightYOutOfBounds;
             bool bottomRightXInverted;
             bool bottomRightYInverted;
             
-            CoordinatesFor(bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(bottomRightS, bottomRightT, bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
             double topLeft1;
             double topLeft2;
@@ -687,17 +706,20 @@ namespace MiniVideoCard
         auto widthAsFloatingPoint = (double)width;
         auto heightAsFloatingPoint = (double)height;
         
-        auto x = position.X() * widthAsFloatingPoint;
-        auto y = position.Y() * heightAsFloatingPoint;
+        auto s = position.X();
+        auto t = position.Y();
         
         if (filter == NearestNeighbor)
         {
+            double x;
+            double y;
+            
             bool xOutOfBounds;
             bool yOutOfBounds;
             bool xInverted;
             bool yInverted;
             
-            CoordinatesFor(x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(s, t, x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
             if ((horizontalWrap == ClampToBorder && xOutOfBounds) || (verticalWrap == ClampToBorder && yOutOfBounds))
             {
@@ -712,25 +734,34 @@ namespace MiniVideoCard
         }
         else
         {
-            auto topLeftX = x - 0.5;
-            auto topLeftY = y - 0.5;
+            auto halfHorizontal = 1.0 / (widthAsFloatingPoint * 2);
+            auto halfVertical = 1.0 / (heightAsFloatingPoint * 2);
+            
+            auto topLeftS = s - halfHorizontal;
+            auto topLeftT = t - halfVertical;
+            
+            double topLeftX;
+            double topLeftY;
             
             bool topLeftXOutOfBounds;
             bool topLeftYOutOfBounds;
             bool topLeftXInverted;
             bool topLeftYInverted;
             
-            CoordinatesFor(topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(topLeftS, topLeftT, topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
-            auto bottomRightX = x + 0.5;
-            auto bottomRightY = y + 0.5;
+            auto bottomRightS = s + halfHorizontal;
+            auto bottomRightT = t + halfVertical;
+            
+            double bottomRightX;
+            double bottomRightY;
             
             bool bottomRightXOutOfBounds;
             bool bottomRightYOutOfBounds;
             bool bottomRightXInverted;
             bool bottomRightYInverted;
             
-            CoordinatesFor(bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(bottomRightS, bottomRightT, bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
             double topLeft1;
             double topLeft2;
@@ -880,17 +911,20 @@ namespace MiniVideoCard
         auto widthAsFloatingPoint = (double)width;
         auto heightAsFloatingPoint = (double)height;
         
-        auto x = position.X() * widthAsFloatingPoint;
-        auto y = position.Y() * heightAsFloatingPoint;
-
+        auto s = position.X();
+        auto t = position.Y();
+        
         if (filter == NearestNeighbor)
         {
+            double x;
+            double y;
+            
             bool xOutOfBounds;
             bool yOutOfBounds;
             bool xInverted;
             bool yInverted;
             
-            CoordinatesFor(x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(s, t, x, y, xOutOfBounds, yOutOfBounds, xInverted, yInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
             if ((horizontalWrap == ClampToBorder && xOutOfBounds) || (verticalWrap == ClampToBorder && yOutOfBounds))
             {
@@ -905,25 +939,34 @@ namespace MiniVideoCard
         }
         else
         {
-            auto topLeftX = x - 0.5;
-            auto topLeftY = y - 0.5;
+            auto halfHorizontal = 1.0 / (widthAsFloatingPoint * 2);
+            auto halfVertical = 1.0 / (heightAsFloatingPoint * 2);
+            
+            auto topLeftS = s - halfHorizontal;
+            auto topLeftT = t - halfVertical;
+            
+            double topLeftX;
+            double topLeftY;
             
             bool topLeftXOutOfBounds;
             bool topLeftYOutOfBounds;
             bool topLeftXInverted;
             bool topLeftYInverted;
             
-            CoordinatesFor(topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(topLeftS, topLeftT, topLeftX, topLeftY, topLeftXOutOfBounds, topLeftYOutOfBounds, topLeftXInverted, topLeftYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
-            auto bottomRightX = x + 0.5;
-            auto bottomRightY = y + 0.5;
+            auto bottomRightS = s + halfHorizontal;
+            auto bottomRightT = t + halfVertical;
+            
+            double bottomRightX;
+            double bottomRightY;
             
             bool bottomRightXOutOfBounds;
             bool bottomRightYOutOfBounds;
             bool bottomRightXInverted;
             bool bottomRightYInverted;
             
-            CoordinatesFor(bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
+            CoordinatesFor(bottomRightS, bottomRightT, bottomRightX, bottomRightY, bottomRightXOutOfBounds, bottomRightYOutOfBounds, bottomRightXInverted, bottomRightYInverted, widthAsFloatingPoint, heightAsFloatingPoint);
             
             double topLeft1;
             double topLeft2;

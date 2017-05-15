@@ -306,19 +306,14 @@ namespace MiniVideoCard
         auto xw2TimesY3 = xw2 * yw3;
         auto xw3TimesY2 = xw3 * yw2;
 
-        auto xw1Minus2 = xw1 - xw2;
-        auto yw1Minus2 = yw1 - yw2;
-        auto xw2Minus3 = xw2 - xw3;
-        auto yw2Minus3 = yw2 - yw3;
-        auto xw3Minus1 = xw3 - xw1;
-        auto yw3Minus1 = yw3 - yw1;
-        
         auto areaTimes2 = fabs(xw1TimesY2 + xw2TimesY3 + xw3TimesY1 - xw2TimesY1 - xw3TimesY2 - xw1TimesY3);
         
         if (areaTimes2 == 0)
         {
             return;
         }
+        
+        auto areaTimes2PlusEpsilon = areaTimes2 + 0.000001;
         
         auto left = max(min(min(xw1, xw2), xw3), 0.0);
         auto bottom = max(min(min(yw1, yw2), yw3), 0.0);
@@ -360,20 +355,13 @@ namespace MiniVideoCard
                 
                 bool discarded = true;
                 
-                if (x >= 0 && x < widthAsDouble && y >= 0 && y < heightAsDouble)
+                if (area12Times2 + area13Times2 + area23Times2 <= areaTimes2PlusEpsilon && x >= 0 && x < widthAsDouble && y >= 0 && y < heightAsDouble && z >= 0 && z <= 1)
                 {
-                    auto sign0 = (x - xw2) * yw1Minus2 - xw1Minus2 * (y - yw2);
-                    auto sign1 = (x - xw3) * yw2Minus3 - xw2Minus3 * (y - yw3);
-                    auto sign2 = (x - xw1) * yw3Minus1 - xw3Minus1 * (y - yw1);
+                    auto position = PositionFor(x, y);
                     
-                    if (((sign0 < 0 && sign1 < 0) || (sign0 >= 0 && sign1 >= 0)) && ((sign1 < 0 && sign2 < 0) || (sign1 >= 0 && sign2 >= 0)))
+                    if (z < depthBuffer[position])
                     {
-                        auto position = PositionFor(x, y);
-                        
-                        if (z >= 0 && z <= 1 && z < depthBuffer[position])
-                        {
-                            discarded = false;
-                        }
+                        discarded = false;
                     }
                 }
                 
